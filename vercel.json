@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/stream/:id",
-      "destination": "/api/stream"
+      "destination": "/api/stream?id=:id"
     }
   ]
 }
