@@ -1,55 +1,67 @@
 export default async function handler(req, res) {
-    // 1. Enhanced CORS Headers
+    // 1. Standard CORS Headers
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Api-Version');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept');
 
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
+    if (req.method === 'OPTIONS') return res.status(200).end();
 
-    // Capture ID from clean URL path or query string
+    // 2. Safely capture the ID
     const { id } = req.query;
-
     if (!id) {
-        return res.status(400).json({ error: "Song ID is required" });
+        return res.status(400).json({ error: "Missing song ID (pids)" });
     }
 
-    // 2. JioSaavn API Call
-    const JIO_API_URL = `https://www.jiosaavn.com/api.php?__call=song.getDetails&pids=${id}&type=song&includeMetaTags=0&ctx=wap6dot0&api_version=4&_format=json&_marker=0`;
+    const JIO_API = `https://www.jiosaavn.com/api.php?__call=song.getDetails&pids=${id}&type=song&includeMetaTags=0&ctx=wap6dot0&api_version=4&_format=json&_marker=0`;
 
     try {
-        const response = await fetch(JIO_API_URL);
-        
-        if (!response.ok) throw new Error("JioSaavn fetch failed");
+        // 3. Fetch with a Timeout to prevent Vercel from hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
-        const data = await response.json();
+        const response = await fetch(JIO_API, { signal: controller.signal });
+        clearTimeout(timeoutId);
 
-        // JioSaavn returns { "Fa6NZlxg": { ... } }
-        let songData = data[id] || Object.values(data)[0];
-
-        if (!songData) {
-            return res.status(404).json({ error: "Song not found" });
+        if (!response.ok) {
+            return res.status(response.status).json({ error: "JioSaavn API unreachable" });
         }
 
-        // 3. Optimization: Flatten the object for the Player
-        // This makes it easier for your frontend to find the encrypted_media_url
-        const responseData = {
-            id: songData.id,
-            title: songData.title,
-            subtitle: songData.subtitle,
-            image: songData.image,
-            // Ensure encrypted_media_url is at the top level for easy access
-            encrypted_media_url: songData.more_info?.encrypted_media_url || songData.encrypted_media_url,
-            album: songData.more_info?.album || songData.album,
-            duration: songData.more_info?.duration || songData.duration
+        const text = await response.text();
+        
+        // 4. Safe JSON Parsing (Crucial for fixing 500 errors)
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error("Malformed JSON from JioSaavn:", text);
+            return res.status(502).json({ error: "Invalid response from music provider" });
+        }
+
+        const rawSong = data[id] || Object.values(data)[0];
+
+        if (!rawSong) {
+            return res.status(404).json({ error: "Track not found in data set" });
+        }
+
+        // 5. Build flattened response
+        const cleanSong = {
+            id: rawSong.id,
+            title: rawSong.title,
+            image: rawSong.image?.replace("150x150", "500x500"),
+            album: rawSong.more_info?.album || rawSong.album,
+            encrypted_media_url: rawSong.more_info?.encrypted_media_url || rawSong.encrypted_media_url,
+            duration: rawSong.more_info?.duration || rawSong.duration
         };
 
-        return res.status(200).json(responseData);
+        return res.status(200).json(cleanSong);
 
     } catch (error) {
-        console.error("Proxy Error:", error);
-        return res.status(500).json({ error: "Failed to fetch stream details" });
+        // Handle Timeout vs Connection Error
+        if (error.name === 'AbortError') {
+            return res.status(504).json({ error: "Gateway Timeout: Music source too slow" });
+        }
+        console.error("Critical Proxy Error:", error);
+        return res.status(500).json({ error: "Internal Server Error", message: error.message });
     }
 }
