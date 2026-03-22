@@ -1,9 +1,3 @@
 {
-  "version": 2,
-  "rewrites": [
-    {
-      "source": "/api/stream/:id",
-      "destination": "/api/stream?id=:id"
-    }
-  ]
+  "version": 2
 }
