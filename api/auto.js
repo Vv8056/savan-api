@@ -25,7 +25,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Token is required" });
     }
 
-    const data = await api.autoFetch({ token, type, lang });
+    const data = await api.autoFetch({ token, type });
 
     res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate");
     res.status(200).json(data);
