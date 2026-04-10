@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     /* ---------------- stationid present ---------------- */
 
     else if (stationid) {
-      data = await api.getRadioStationById({ stationid });
+      data = await api.getRadioStationById({ stationid, token, lang });
     }
 
     /* ---------------- DEFAULT AUTO FETCH ---------------- */
