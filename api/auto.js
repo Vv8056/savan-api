@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   }
   
   try {
-    const { token, type, lang } = req.query;
+    const { token, type, lang, stationid } = req.query;
 
     if (!token) {
       return res.status(400).json({ error: "Token is required" });
@@ -33,6 +33,12 @@ export default async function handler(req, res) {
 
     if (type === "radio_station") {
       data = await api.getRadioStation({ token, type, lang: lang || "hindi" });
+    }
+
+    /* ---------------- stationid present ---------------- */
+
+    else if (stationid) {
+      data = await api.getRadioStationById({ stationid });
     }
 
     /* ---------------- DEFAULT AUTO FETCH ---------------- */
