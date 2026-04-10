@@ -38,7 +38,7 @@ export default async function handler( req, res) {
             return res.status(200).json({ stationid, error: "Station expired — token required to recreate" });
           }
             
-          const station = await api.getRadioStation({ token, lang });
+          const station = await api.getRadioStation({ token, type, lang });
 
           const newStationId = station?.stationid;
 
