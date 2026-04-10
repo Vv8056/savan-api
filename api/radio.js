@@ -16,7 +16,7 @@ export default async function handler( req, res) {
     }
 
     try {
-      const { stationid, token, lang } = req.query;
+      const { stationid, token, type, lang } = req.query;
 
       if (!stationid) {
         return res.status(400).json({ error: "stationid or token required" });
