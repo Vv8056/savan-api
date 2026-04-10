@@ -21,10 +21,6 @@ export default async function handler(req, res) {
   try {
     const { token, type, lang, stationid } = req.query;
 
-    if (!token) {
-      return res.status(400).json({ error: "Token is required" });
-    }
-
     // const data = await api.autoFetch({ token, type });
 
     let data;
@@ -32,6 +28,9 @@ export default async function handler(req, res) {
     /* ---------------- RADIO STATION SPECIAL CASE ---------------- */
 
     if (type === "radio_station") {
+      if (!token) {
+        return res.status(400).json({ error: "Token required for radio station" });
+      }
       data = await api.getRadioStation({ token, type, lang: lang || "hindi" });
     }
 
@@ -44,6 +43,9 @@ export default async function handler(req, res) {
     /* ---------------- DEFAULT AUTO FETCH ---------------- */
 
     else {
+      if (!token) {
+        return res.status(400).json({ error: "Token is required" });
+      }
       data = await api.autoFetch({ token, type });
     }
 
