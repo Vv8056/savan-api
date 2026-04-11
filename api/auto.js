@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   }
   
   try {
-    const { token, type, lang, stationid } = req.query;
+    const { token, type, lang, stationid, sn } = req.query;
 
     // const data = await api.autoFetch({ token, type });
 
